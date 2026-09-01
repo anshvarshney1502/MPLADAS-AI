@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+data/*.csv
+data/*.db
+models/*.pkl
+outputs/*.csv
+outputs/*.txt
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
