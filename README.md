@@ -43,10 +43,10 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Place the three source CSVs in `data/`:
-- `mplads_expenditures.csv`
-- `mplads_completed_works.csv`
-- `mplads_summary.csv`
+The source CSVs (`mplads_expenditures.csv`, `mplads_completed_works.csv`,
+`mplads_summary.csv`) are included in `data/`, so the API can run right away.
+To use a different dataset, replace those files (same filenames/columns) or
+call `/api/data/upload`.
 
 ```bash
 uvicorn main:app --reload --port 8000
