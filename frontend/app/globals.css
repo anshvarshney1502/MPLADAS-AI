@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+:root {
+  /* Base surfaces */
+  --background: #F7F8FA;
+  --surface: #FFFFFF;
+  --surface-soft: #F5F6F8;
+
+  /* Institutional palette */
+  --primary: #0B1F3A;
+  --primary-secondary: #17365D;
+  --accent: #2563EB;
+  --accent-soft: #EFF6FF;
+
+  /* Text */
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+
+  /* Borders */
+  --border: #E2E8F0;
+  --border-subtle: #F1F5F9;
+
+  /* Semantic risk colors */
+  --risk-high: #DC2626;
+  --risk-high-bg: #FEF2F2;
+  --risk-medium: #D97706;
+  --risk-medium-bg: #FFFBEB;
+  --risk-low: #16A34A;
+  --risk-low-bg: #F0FDF4;
+  --info: #2563EB;
+  --info-bg: #EFF6FF;
+
+  /* Matches the real MPLADS MIS (mplads.mospi.gov.in) register: white
+     cards, thin border, modest rounding, a light shadow — not flat/sharp,
+     not soft-glow SaaS either. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-card-hover: 0 2px 6px rgba(15, 23, 42, 0.08);
+
+  /* Pale mint-cyan table header, matching the reference MIS tables. */
+  --table-head-bg: #E9FBFA;
+  --table-head-text: #0F172A;
+
+  --utility-bar-bg: #0B0F2A;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-primary: var(--primary);
+  --color-primary-secondary: var(--primary-secondary);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-risk-high: var(--risk-high);
+  --color-risk-high-bg: var(--risk-high-bg);
+  --color-risk-medium: var(--risk-medium);
+  --color-risk-medium-bg: var(--risk-medium-bg);
+  --color-risk-low: var(--risk-low);
+  --color-risk-low-bg: var(--risk-low-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-table-head-bg: var(--table-head-bg);
+  --color-table-head-text: var(--table-head-text);
+  --color-utility-bar-bg: var(--utility-bar-bg);
+  --font-heading: var(--font-poppins);
+  --font-body: var(--font-inter);
+}
+
+html, body {
+  height: 100%;
+}
+
+/* Real, working text-size control for the A- / A / A+ accessibility bar —
+   scales every rem-based size in the app, not a decorative no-op button. */
+html {
+  font-size: calc(16px * var(--a11y-scale, 1));
+}
+
+body {
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
+  color: var(--primary);
+  letter-spacing: -0.01em;
+}
+
+* {
+  border-color: var(--border);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
