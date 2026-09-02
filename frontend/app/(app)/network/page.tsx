@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/use-api";
+import { NetworkCanvas } from "@/components/NetworkCanvas";
 import { CardSkeleton } from "@/components/LoadingSkeleton";
 import { ErrorState } from "@/components/ErrorState";
 import { EmptyState } from "@/components/EmptyState";
@@ -13,6 +14,10 @@ interface VendorGroup {
   label: string;
   states: { label: string; weight: number }[];
   totalWeight: number;
+}
+
+function isVendor(id: string) {
+  return id.startsWith("vendor::");
 }
 
 export default function NetworkPage() {
@@ -36,7 +41,29 @@ export default function NetworkPage() {
     return Array.from(byVendor.values()).sort((a, b) => b.totalWeight - a.totalWeight);
   }, [result.data]);
 
-  const active = vendors.find((v) => v.id === selected) ?? vendors[0];
+  // Bidirectional neighbor index — works for either a vendor or a state
+  // node, so clicking a state on the canvas gets a real detail panel too,
+  // not just vendors picked from the list. Built once from the same real
+  // edges the API already returns.
+  const nodesById = useMemo(() => new Map((result.data?.nodes ?? []).map((n) => [n.id, n])), [result.data]);
+  const neighborStats = useMemo(() => {
+    const m = new Map<string, { count: number; totalWeight: number }>();
+    for (const e of result.data?.edges ?? []) {
+      const a = m.get(e.source) ?? { count: 0, totalWeight: 0 };
+      a.count += 1;
+      a.totalWeight += e.weight;
+      m.set(e.source, a);
+      const b = m.get(e.target) ?? { count: 0, totalWeight: 0 };
+      b.count += 1;
+      b.totalWeight += e.weight;
+      m.set(e.target, b);
+    }
+    return m;
+  }, [result.data]);
+
+  const activeId = selected ?? vendors[0]?.id ?? null;
+  const activeNode = activeId ? nodesById.get(activeId) : undefined;
+  const activeStats = activeId ? neighborStats.get(activeId) : undefined;
 
   return (
     <div className="space-y-5 pb-12">
@@ -52,7 +79,7 @@ export default function NetworkPage() {
       ) : vendors.length === 0 ? (
         <EmptyState title="No vendor relationship data available." />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+        <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
           <div className="max-h-[560px] overflow-y-auto rounded-[var(--radius-md)] border border-border bg-surface">
             {vendors.slice(0, 50).map((v) => (
               <button
@@ -60,7 +87,7 @@ export default function NetworkPage() {
                 onClick={() => setSelected(v.id)}
                 className={cn(
                   "flex w-full items-center justify-between border-b border-border-subtle px-4 py-3 text-left last:border-0 hover:bg-surface-soft",
-                  active?.id === v.id && "bg-accent-soft"
+                  activeId === v.id && "bg-accent-soft"
                 )}
               >
                 <span className="line-clamp-1 text-[12.5px] font-medium text-text-primary">{v.label}</span>
@@ -71,41 +98,30 @@ export default function NetworkPage() {
             ))}
           </div>
 
-          {active ? (
-            <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
+            {activeNode ? (
               <div className="rounded-[var(--radius-md)] border border-border bg-surface p-5">
-                <div className="font-heading text-sm font-bold text-text-primary">{active.label}</div>
+                <div className="font-heading text-sm font-bold text-text-primary">{activeNode.label}</div>
                 <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                  <Stat label="Connected states" value={active.states.length} />
-                  <Stat label="Transaction weight" value={active.totalWeight} />
-                  <Stat label="Avg. per state" value={Math.round(active.totalWeight / Math.max(1, active.states.length))} />
+                  <Stat label={isVendor(activeNode.id) ? "Connected states" : "Connected vendors"} value={activeStats?.count ?? 0} />
+                  <Stat label="Transaction weight" value={activeStats?.totalWeight ?? 0} />
+                  <Stat
+                    label={isVendor(activeNode.id) ? "Avg. per state" : "Avg. per vendor"}
+                    value={Math.round((activeStats?.totalWeight ?? 0) / Math.max(1, activeStats?.count ?? 1))}
+                  />
                 </div>
               </div>
+            ) : null}
 
-              <div className="rounded-[var(--radius-md)] border border-border bg-surface p-5">
-                <svg viewBox="0 0 400 280" className="h-72 w-full">
-                  <circle cx="70" cy="140" r="24" fill="var(--color-primary)" />
-                  <text x="70" y="144" textAnchor="middle" fontSize="9" fill="#fff" fontFamily="var(--font-inter)">
-                    Vendor
-                  </text>
-                  {active.states.slice(0, 8).map((s, i, arr) => {
-                    const y = 30 + (i * (250 - 30)) / Math.max(1, arr.length - 1 || 1);
-                    return (
-                      <g key={i}>
-                        <line x1="94" y1="140" x2="320" y2={y} stroke="var(--color-border)" strokeWidth={Math.min(4, 1 + s.weight / 5)} />
-                        <circle cx="330" cy={y} r="14" fill="var(--color-accent-soft)" stroke="var(--color-accent)" strokeWidth="1.5" />
-                        <text x="330" y={y + 24} textAnchor="middle" fontSize="9" fill="var(--color-text-secondary)" fontFamily="var(--font-inter)">
-                          {s.label.length > 14 ? s.label.slice(0, 14) + "…" : s.label}
-                        </text>
-                      </g>
-                    );
-                  })}
-                </svg>
-              </div>
+            <NetworkCanvas
+              nodes={result.data!.nodes}
+              edges={result.data!.edges}
+              selectedId={activeId}
+              onSelect={(id) => setSelected(id)}
+            />
 
-              {result.data ? <p className="text-[11px] text-text-muted">{result.data.language_rule}</p> : null}
-            </div>
-          ) : null}
+            <p className="text-[11px] text-text-muted">{result.data!.language_rule}</p>
+          </div>
         </div>
       )}
     </div>
