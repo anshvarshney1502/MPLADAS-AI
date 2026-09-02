@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/use-api";
 import { RiskBadge } from "@/components/RiskBadge";
+import { WorkflowStepper } from "@/components/WorkflowStepper";
 import { TableSkeleton, KpiSkeletonRow } from "@/components/LoadingSkeleton";
 import { ErrorState } from "@/components/ErrorState";
 import { EmptyState } from "@/components/EmptyState";
+import { staggerReveal } from "@/lib/animations";
+import { gsap } from "gsap";
 
 export default function InspectionQueuePage() {
   const [page, setPage] = useState(1);
@@ -18,12 +21,18 @@ export default function InspectionQueuePage() {
   const queue = useApi(() => api.inspectionQueue({ min_score: 60, page, page_size: 20 }), [page]);
   const critical = useApi(() => api.riskIntelligence({ min_score: 80, page_size: 1 }), []);
   const high = useApi(() => api.riskIntelligence({ min_score: 60, max_score: 79.99, page_size: 1 }), []);
+  const listRef = useRef<HTMLDivElement>(null);
 
-  async function openCase(workKey: string) {
+  useEffect(() => {
+    if (listRef.current) staggerReveal(listRef.current.querySelectorAll(":scope > div"));
+  }, [queue.data]);
+
+  async function openCase(workKey: string, rowEl: HTMLElement | null) {
     setBusyKey(workKey);
     try {
       await api.inspectionAction(workKey, "initiate_verification");
       setOpenedKeys((s) => new Set(s).add(workKey));
+      if (rowEl) gsap.fromTo(rowEl, { backgroundColor: "var(--color-accent-soft)" }, { backgroundColor: "transparent", duration: 0.9, ease: "power1.out" });
     } catch {
       // surfaced inline per row via the button falling back to "Retry"
     } finally {
@@ -35,8 +44,10 @@ export default function InspectionQueuePage() {
     <div className="space-y-5 pb-12">
       <div>
         <h1 className="font-heading text-2xl font-bold text-primary">Inspection Priority Queue</h1>
-        <p className="mt-1 text-[13px] text-text-secondary">Detection → Prioritization → Inspection → Verification.</p>
+        <p className="mt-1 text-[13px] text-text-secondary">The operational path from detection to resolution.</p>
       </div>
+
+      <WorkflowStepper activeIndex={2} />
 
       {critical.loading || high.loading ? (
         <KpiSkeletonRow count={2} />
@@ -66,11 +77,15 @@ export default function InspectionQueuePage() {
       ) : queue.error ? (
         <ErrorState message={queue.error} onRetry={queue.reload} />
       ) : queue.data && queue.data.data.length > 0 ? (
-        <div className="divide-y divide-border-subtle rounded-[var(--radius-md)] border border-border bg-surface">
+        <div ref={listRef} className="divide-y divide-border-subtle rounded-[var(--radius-md)] border border-border bg-surface shadow-[var(--shadow-card)]">
           {queue.data.data.map((item) => {
             const opened = openedKeys.has(item.work_key);
             return (
-              <div key={item.work_key} className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center">
+              <div
+                key={item.work_key}
+                id={`queue-row-${item.work_key}`}
+                className="flex flex-col gap-3 px-4 py-3.5 transition-colors hover:bg-surface-soft sm:flex-row sm:items-center"
+              >
                 <div className="w-10 flex-none font-heading text-sm font-bold text-text-primary">#{item.rank}</div>
                 <div className="min-w-0 flex-1">
                   <Link href={`/risk-intelligence/${encodeURIComponent(item.work_key)}`} className="line-clamp-1 text-[13px] font-semibold text-text-primary hover:text-accent">
@@ -87,7 +102,7 @@ export default function InspectionQueuePage() {
                   </div>
                   <RiskBadge level={item.priority} />
                   <button
-                    onClick={() => openCase(item.work_key)}
+                    onClick={(e) => openCase(item.work_key, e.currentTarget.closest(`#queue-row-${CSS.escape(item.work_key)}`))}
                     disabled={busyKey === item.work_key || opened}
                     className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-primary px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary-secondary disabled:opacity-60"
                   >
