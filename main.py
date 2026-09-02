@@ -1,6 +1,6 @@
 
 from __future__ import annotations
-import os, math, pickle, sqlite3
+import os, math, pickle, sqlite3, threading
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -303,21 +303,31 @@ def evidence(r):
 class State:
     df=pd.DataFrame(); model=None
 S=State()
+_ensure_lock=threading.Lock()
 
 def ensure():
-    if S.df.empty:
-        for p in (EXP,COMP,SUM):
-            if not p.exists(): raise HTTPException(503,f"Missing source CSV: {p.name}. Upload it to /api/data/upload or place it in data/.")
-        exp,comp,summ=read_csv(EXP),read_csv(COMP),read_csv(SUM)
-        S.df=prepare(exp,comp,summ)
-    if S.model is None:
-        if MODEL_FILE.exists():
-            with open(MODEL_FILE,"rb") as f:S.model=pickle.load(f)
-            S.df=S.model.predict(S.df)
-        else:
-            S.model=Model().fit(S.df); S.df=S.model.predict(S.df)
-            with open(MODEL_FILE,"wb") as f:pickle.dump(S.model,f)
-    return S.df
+    # FastAPI runs sync endpoints in a thread pool, so concurrent cold
+    # requests (the frontend fires several on page load) could previously
+    # race here: multiple threads would each see S.df/S.model uninitialized
+    # and independently re-run prepare()/train the model at the same time
+    # (duplicating memory), or read S.df mid-update from another thread
+    # (causing a real "no attribute Risk_Score" crash). The lock makes the
+    # one-time cold-start initialization atomic; every other caller just
+    # waits for it and then reads the same fully-initialized S.df.
+    with _ensure_lock:
+        if S.df.empty:
+            for p in (EXP,COMP,SUM):
+                if not p.exists(): raise HTTPException(503,f"Missing source CSV: {p.name}. Upload it to /api/data/upload or place it in data/.")
+            exp,comp,summ=read_csv(EXP),read_csv(COMP),read_csv(SUM)
+            S.df=prepare(exp,comp,summ)
+        if S.model is None:
+            if MODEL_FILE.exists():
+                with open(MODEL_FILE,"rb") as f:S.model=pickle.load(f)
+                S.df=S.model.predict(S.df)
+            else:
+                S.model=Model().fit(S.df); S.df=S.model.predict(S.df)
+                with open(MODEL_FILE,"wb") as f:pickle.dump(S.model,f)
+        return S.df
 
 def work_row(key):
     df=ensure()
