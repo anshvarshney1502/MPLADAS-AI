@@ -2,7 +2,35 @@
 
 import "@/lib/chart-setup";
 import { Doughnut } from "react-chartjs-2";
+import type { Plugin } from "chart.js";
 import { CHART_COLORS } from "@/lib/chart-setup";
+
+/** Draws a soft offset shadow ring beneath the doughnut before it renders —
+ * a subtle extrusion cue so the ring reads as a raised 3D disc rather than a
+ * flat 2D arc, without altering the real data arcs or their hit-testing. */
+const donut3dPlugin: Plugin<"doughnut"> = {
+  id: "donut3d",
+  beforeDatasetsDraw(chart) {
+    const { ctx } = chart;
+    const meta = chart.getDatasetMeta(0);
+    const offset = 5;
+    ctx.save();
+    ctx.translate(0, offset);
+    meta.data.forEach((arc) => {
+      const { x, y, innerRadius, outerRadius, startAngle, endAngle } = arc.getProps(
+        ["x", "y", "innerRadius", "outerRadius", "startAngle", "endAngle"],
+        true
+      );
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(15, 23, 42, 0.14)";
+      ctx.arc(x, y, outerRadius, startAngle, endAngle);
+      ctx.arc(x, y, innerRadius, endAngle, startAngle, true);
+      ctx.closePath();
+      ctx.fill();
+    });
+    ctx.restore();
+  },
+};
 
 const ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 const COLOR_MAP: Record<string, string> = {
@@ -33,6 +61,7 @@ export function RiskDistributionDonut({ distribution }: { distribution: Record<s
     <div className="relative flex h-56 items-center justify-center">
       <Doughnut
         data={data}
+        plugins={[donut3dPlugin]}
         options={{
           responsive: true,
           maintainAspectRatio: false,
