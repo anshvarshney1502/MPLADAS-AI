@@ -13,7 +13,7 @@ const ROLES: Role[] = ["ministry", "state", "district", "mp"];
 export default function LoginPage() {
   const { setRole } = useRole();
   const router = useRouter();
-  const [selected, setSelected] = useState<Role>("district");
+  const [selected, setSelected] = useState<Role>("ministry");
   const cardRef = useRef<HTMLDivElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
   const brandRef = useRef<HTMLDivElement>(null);
