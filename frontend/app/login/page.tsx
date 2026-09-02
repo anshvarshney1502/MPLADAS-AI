@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { gsap } from "gsap";
-import { ShieldCheck } from "lucide-react";
+import { LoginMapBackdrop } from "@/components/LoginMapBackdrop";
 import { useRole, ROLE_LABELS, ROLE_DESCRIPTIONS } from "@/lib/role-context";
 import type { Role } from "@/lib/types";
 
@@ -42,41 +43,11 @@ export default function LoginPage() {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-sidebar-bg px-14 py-12 text-white lg:flex">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-            backgroundSize: "28px 28px",
-          }}
-        />
+      <div className="relative hidden flex-col overflow-hidden bg-sidebar-bg px-14 py-12 text-white lg:flex">
+        <LoginMapBackdrop />
         <div ref={brandRef} className="relative">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] bg-accent font-heading text-lg font-bold">M</div>
-            <div>
-              <div className="font-heading text-lg font-bold">MPLADS AI</div>
-              <div className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-sidebar-text">
-                Risk &amp; Monitoring Intelligence
-              </div>
-            </div>
-          </div>
-          <h1 className="mt-16 max-w-md font-heading text-3xl font-bold leading-tight">
-            AI identifies where to look first — officials verify and decide.
-          </h1>
-          <p className="mt-5 max-w-md text-[13.5px] leading-relaxed text-sidebar-text">
-            An explainable, risk-based intelligence layer over MPLADS transaction and project data —
-            turning accessible records into prioritized, evidence-backed verification actions.
-          </p>
-          <div className="mt-10 flex items-center gap-2 text-[12px] font-medium text-sidebar-text">
-            <ShieldCheck size={16} className="text-accent" />
-            Decision support only — final verification remains with the authority.
-          </div>
+          <Image src="/logo-light.png" alt="MPLADS AI — Risk & Monitoring Intelligence" width={2172} height={724} priority className="h-9 w-auto" />
         </div>
-        <p className="relative max-w-md text-[11px] leading-relaxed text-sidebar-text/70">
-          MPLADS AI is an independent analysis prototype and is not affiliated with, endorsed by, or a
-          replacement for MPLADS/eSAKSHI or any Government of India system.
-        </p>
       </div>
 
       <div className="flex flex-1 items-center justify-center bg-surface-soft px-4 py-10">
@@ -128,7 +99,7 @@ export default function LoginPage() {
             </button>
           </div>
           <div className="rounded-b-[var(--radius-lg)] border-t border-border bg-surface-soft px-7 py-2.5 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-text-muted">
-            Demo Access · Prototype Dataset
+            Demo Access
           </div>
         </div>
       </div>

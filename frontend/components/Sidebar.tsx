@@ -58,7 +58,7 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
         style={{ transform: open ? "translateX(0)" : "translateX(-100%)" }}
       >
         <div className="flex items-center justify-between gap-2 px-5 py-6">
-          <Image src="/logo.png" alt="MPLADS AI — Risk & Monitoring Intelligence" width={2089} height={753} priority className="h-11 w-auto" />
+          <Image src="/logo.png" alt="MPLADS AI — Risk & Monitoring Intelligence" width={2172} height={724} priority className="h-12 w-auto" />
           <button onClick={onClose} className="rounded-[var(--radius-sm)] p-1 text-text-muted hover:bg-surface-soft lg:hidden">
             <X size={16} />
           </button>
