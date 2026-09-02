@@ -5,7 +5,7 @@
 **An explainable, risk-based intelligence layer over MPLADS transaction and project data.**
 Turns raw MPLADS records into prioritized, evidence-backed verification actions for officials — a **decision-support tool**, not an automated fraud verdict.
 
-[![Live Frontend](https://img.shields.io/badge/🚀_Live_Demo-Frontend-2563eb?style=for-the-badge)](https://mplads-topaz.vercel.app/overview)
+[![Live Frontend](https://img.shields.io/badge/🚀_Live_Demo-Frontend-2563eb?style=for-the-badge)](https://mplads-topaz.vercel.app/login)
 [![Live Backend](https://img.shields.io/badge/⚙️_Live_Demo-Backend_API-16a34a?style=for-the-badge)](https://mplads-topaz.vercel.app/overview)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)](#backend)
 [![Next.js](https://img.shields.io/badge/Next.js_16-000000?style=flat&logo=next.js&logoColor=white)](#frontend)
@@ -63,7 +63,7 @@ Turns raw MPLADS records into prioritized, evidence-backed verification actions 
 
 | Layer | URL | Notes |
 |---|---|---|
-| 🖥️ **Frontend** (Next.js app) | **[mplads-topaz.vercel.app/overview](https://mplads-topaz.vercel.app/overview)** | District/state/MP dashboards, risk map, inspection workflow |
+| 🖥️ **Frontend** (Next.js app) | **[mplads-topaz.vercel.app/login](https://mplads-topaz.vercel.app/login)** | District/state/MP dashboards, risk map, inspection workflow |
 | ⚙️ **Backend** (FastAPI service) | **[https://mpladas.onrender.com](https://mpladas.onrender.com/)** | Deployed alongside the frontend — see [API Reference](#-api-reference) for the `/api/*` routes it exposes |
 
 > 💡 Prefer to run it yourself? Jump to [Getting Started](#-getting-started) for local backend + frontend setup.
