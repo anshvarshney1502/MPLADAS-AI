@@ -27,11 +27,13 @@ app=FastAPI(title="MPLADS AI",version="1.0.0",
  description="MPLADS Risk & Monitoring Intelligence API")
 
 # Explicit origin allowlist (not "*") so credentialed requests work correctly
-# from the deployed frontend. Override/extend via the ALLOWED_ORIGINS env var
-# (comma-separated) without touching code — e.g. on Render, to add another
-# deployed frontend URL later.
-_DEFAULT_ORIGINS="http://localhost:3000,http://127.0.0.1:3000,https://mplads-topaz.vercel.app"
-ALLOWED_ORIGINS=[o.strip() for o in os.environ.get("ALLOWED_ORIGINS",_DEFAULT_ORIGINS).split(",") if o.strip()]
+# from the deployed frontend. These required origins are always included
+# regardless of environment config; ALLOWED_ORIGINS (comma-separated) only
+# ever ADDS more origins on top — it can never accidentally disable these by
+# being unset/empty/misconfigured in a deployment dashboard.
+_REQUIRED_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000","https://mplads-topaz.vercel.app"]
+_EXTRA_ORIGINS=[o.strip() for o in os.environ.get("ALLOWED_ORIGINS","").split(",") if o.strip()]
+ALLOWED_ORIGINS=list(dict.fromkeys(_REQUIRED_ORIGINS+_EXTRA_ORIGINS))
 app.add_middleware(CORSMiddleware,allow_origins=ALLOWED_ORIGINS,allow_credentials=True,
                    allow_methods=["*"],allow_headers=["*"])
 
