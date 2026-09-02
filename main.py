@@ -181,7 +181,7 @@ class Model:
     def __init__(self):
         self.num=[]; self.cat=[]; self.maps={}; self.imp=SimpleImputer(strategy="median")
         self.scaler=StandardScaler()
-        self.iso=IsolationForest(n_estimators=300,contamination="auto",random_state=42,n_jobs=-1)
+        self.iso=IsolationForest(n_estimators=300,contamination="auto",random_state=42,n_jobs=1)
         self.ready=False
     def matrix(self,df,fit=False):
         x=df.drop(columns=[c for c in DROP if c in df],errors="ignore").copy()
