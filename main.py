@@ -25,7 +25,14 @@ MODEL_FILE=MODELS/"mplads_model.pkl"
 
 app=FastAPI(title="MPLADS AI",version="1.0.0",
  description="MPLADS Risk & Monitoring Intelligence API")
-app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_credentials=True,
+
+# Explicit origin allowlist (not "*") so credentialed requests work correctly
+# from the deployed frontend. Override/extend via the ALLOWED_ORIGINS env var
+# (comma-separated) without touching code — e.g. on Render, to add another
+# deployed frontend URL later.
+_DEFAULT_ORIGINS="http://localhost:3000,http://127.0.0.1:3000,https://mplads-topaz.vercel.app"
+ALLOWED_ORIGINS=[o.strip() for o in os.environ.get("ALLOWED_ORIGINS",_DEFAULT_ORIGINS).split(",") if o.strip()]
+app.add_middleware(CORSMiddleware,allow_origins=ALLOWED_ORIGINS,allow_credentials=True,
                    allow_methods=["*"],allow_headers=["*"])
 
 class Action(BaseModel):
