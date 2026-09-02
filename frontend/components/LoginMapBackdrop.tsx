@@ -42,6 +42,10 @@ const PAN_MARGIN = 90;
  * where the state actually visually reads — still a genuine geometric
  * point derived from the real boundary, not an invented position.
  */
+function getName(f: Feature<Geometry>, fallback = ""): string {
+  return String((f.properties as Record<string, unknown> | null)?.NAME_1 ?? fallback);
+}
+
 function naturalCentroid(path: d3geo.GeoPath<unknown, d3geo.GeoPermissibleObjects>, f: Feature<Geometry>): [number, number] {
   const geom = f.geometry;
   if (geom.type !== "MultiPolygon") return path.centroid(f);
@@ -57,6 +61,66 @@ function naturalCentroid(path: d3geo.GeoPath<unknown, d3geo.GeoPermissibleObject
   }
   return best ? path.centroid(best) : path.centroid(f);
 }
+
+/**
+ * The source boundary file is aggressively simplified for file size, which
+ * leaves visibly jagged, "staircased" edges compared to a proper reference
+ * map. Chaikin's corner-cutting algorithm smooths the real point sequence
+ * into gentler curves — it reshapes how the existing points are connected,
+ * it does not move the boundary or invent new geometry. Two iterations is
+ * conservative enough to keep the true state shapes recognizable.
+ */
+function chaikinSmooth(points: Pos[], iterations: number): Pos[] {
+  let pts = points;
+  for (let iter = 0; iter < iterations; iter++) {
+    if (pts.length < 3) break;
+    const next: Pos[] = [];
+    const n = pts.length;
+    for (let i = 0; i < n; i++) {
+      const p0 = pts[i];
+      const p1 = pts[(i + 1) % n];
+      next.push({ x: p0.x * 0.75 + p1.x * 0.25, y: p0.y * 0.75 + p1.y * 0.25 });
+      next.push({ x: p0.x * 0.25 + p1.x * 0.75, y: p0.y * 0.25 + p1.y * 0.75 });
+    }
+    pts = next;
+  }
+  return pts;
+}
+
+function projectRings(geom: Geometry, project: d3geo.GeoProjection): Pos[][] {
+  const rings: Pos[][] = [];
+  function addRing(coords: [number, number][]) {
+    const pts: Pos[] = [];
+    for (const c of coords) {
+      const p = project(c);
+      if (p && Number.isFinite(p[0]) && Number.isFinite(p[1])) pts.push({ x: p[0], y: p[1] });
+    }
+    if (pts.length > 2) rings.push(chaikinSmooth(pts, 2));
+  }
+  if (geom.type === "Polygon") {
+    for (const ring of geom.coordinates) addRing(ring as [number, number][]);
+  } else if (geom.type === "MultiPolygon") {
+    for (const poly of geom.coordinates) for (const ring of poly) addRing(ring as [number, number][]);
+  }
+  return rings;
+}
+
+function strokeRings(ctx: CanvasRenderingContext2D, rings: Pos[][]) {
+  for (const ring of rings) {
+    if (ring.length === 0) continue;
+    ctx.moveTo(ring[0].x, ring[0].y);
+    for (let i = 1; i < ring.length; i++) ctx.lineTo(ring[i].x, ring[i].y);
+    ctx.closePath();
+  }
+}
+
+/**
+ * Jammu and Kashmir and Ladakh are both drawn with the dashed
+ * disputed-border convention (both carry a Line-of-Control / undemarcated
+ * boundary in the real world), unlike every other state/UT which gets a
+ * plain solid outline.
+ */
+const DASHED_REGIONS = new Set(["Jammu and Kashmir", "Ladakh"]);
 
 function buildNearestNeighborLinks(names: string[], centroids: Map<string, Pos>): [string, string][] {
   const pairs = new Set<string>();
@@ -116,7 +180,7 @@ export function LoginMapBackdrop() {
     const nameList: string[] = [];
     const cMap = new Map<string, Pos>();
     features.forEach((f, i) => {
-      const name = String((f.properties as Record<string, unknown> | null)?.NAME_1 ?? `region-${i}`);
+      const name = getName(f, `region-${i}`);
       const [x, y] = naturalCentroid(path, f);
       if (Number.isFinite(x) && Number.isFinite(y)) {
         nameList.push(name);
@@ -124,6 +188,22 @@ export function LoginMapBackdrop() {
       }
     });
     return { names: nameList, centroids: cMap, links: buildNearestNeighborLinks(nameList, cMap) };
+  }, [features, projection]);
+
+  // Smoothed boundary rings, precomputed once from the real geometry so the
+  // per-frame draw loop only ever walks plain point arrays.
+  const { outerRings, jkRings } = useMemo(() => {
+    if (!projection || features.length === 0) {
+      return { outerRings: [] as Pos[][], jkRings: [] as Pos[][] };
+    }
+    const outer: Pos[][] = [];
+    const jk: Pos[][] = [];
+    for (const f of features) {
+      const rings = projectRings(f.geometry, projection);
+      if (DASHED_REGIONS.has(getName(f))) jk.push(...rings);
+      else outer.push(...rings);
+    }
+    return { outerRings: outer, jkRings: jk };
   }, [features, projection]);
 
   const stateRef = useRef({
@@ -211,7 +291,6 @@ export function LoginMapBackdrop() {
     ro.observe(container);
 
     const ctx = canvas.getContext("2d")!;
-    const pathGen = d3geo.geoPath(projection!, ctx);
     let t = 0;
 
     function draw() {
@@ -227,13 +306,26 @@ export function LoginMapBackdrop() {
         ctx.translate(tx, ty);
         ctx.scale(scale, scale);
 
-        // Boundaries — a clean, uncolored outline only.
-        ctx.beginPath();
-        for (const f of features) pathGen(f);
+        // Boundaries — a clean, uncolored outline only. Jammu and Kashmir
+        // and Ladakh both carry a Line-of-Control / undemarcated boundary
+        // in the real world, so they're drawn dashed rather than solid
+        // like the other states/UTs.
         ctx.strokeStyle = "rgba(255,255,255,0.8)";
         ctx.lineWidth = 1.15 / scale;
         ctx.lineJoin = "round";
+
+        ctx.beginPath();
+        strokeRings(ctx, outerRings);
+        ctx.setLineDash([]);
         ctx.stroke();
+
+        if (jkRings.length > 0) {
+          ctx.beginPath();
+          strokeRings(ctx, jkRings);
+          ctx.setLineDash([3 / scale, 2.5 / scale]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
 
         const focus = stateRef.current.hoverId ?? stateRef.current.selectedId;
 
@@ -296,7 +388,7 @@ export function LoginMapBackdrop() {
       ro.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [features, projection, names, links]);
+  }, [features, projection, names, links, outerRings, jkRings]);
 
   function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     const world = toWorld(e.clientX, e.clientY);
