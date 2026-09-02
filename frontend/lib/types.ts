@@ -41,6 +41,7 @@ export interface WorkRow extends Record<string, unknown> {
   priority?: string;
   status?: string;
   risk_type?: string;
+  reasons?: string[];
   "MP Name"?: string;
   Constituency?: string;
   State?: string;

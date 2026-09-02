@@ -405,9 +405,11 @@ def risk_intelligence(state_name:Optional[str]=Query(None,alias="state"),risk_ty
     d,m=paginate(df,page,page_size)
     rows=[]
     for i,r in d.iterrows():
-        x=rec(r); x.update({"work_key":str(r.get("Work ID",r.get("WorkID",i))),
+        key=str(r.get("Work ID",r.get("WorkID",i)))
+        x=rec(r); x.update({"work_key":key,
                             "score":float(r.Risk_Score),"priority":str(r.Risk_Category).title(),
-                            "status":str(r.Risk_Status),"risk_type":str(r.Risk_Type)})
+                            "status":latest_action_status(key) or str(r.Risk_Status),"risk_type":str(r.Risk_Type),
+                            "reasons":[rr["message"] for rr in reasons(r)[:2]]})
         rows.append(x)
     return {"data":rows,"meta":m}
 
