@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import type { PageMeta } from "@/lib/types";
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
 export interface Column<T> {
   key: string;
   label: string;
@@ -19,6 +21,7 @@ export function DataTable<T extends { work_key?: string }>({
   onRowClick,
   meta,
   onPageChange,
+  onPageSizeChange,
   rowKey,
 }: {
   columns: Column<T>[];
@@ -26,6 +29,7 @@ export function DataTable<T extends { work_key?: string }>({
   onRowClick?: (row: T) => void;
   meta?: PageMeta;
   onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   rowKey?: (row: T, index: number) => string;
 }) {
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
@@ -113,26 +117,44 @@ export function DataTable<T extends { work_key?: string }>({
           </tbody>
         </table>
       </div>
-      {meta && meta.total_pages > 1 ? (
-        <div className="flex items-center justify-between border-t border-border px-4 py-2.5 text-xs text-text-muted">
+      {meta ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-text-muted">
           <span>
-            Page {meta.page} of {meta.total_pages} · {meta.total.toLocaleString("en-IN")} records
+            Page {meta.page} of {Math.max(meta.total_pages, 1)} · {meta.total.toLocaleString("en-IN")} records
           </span>
-          <div className="flex items-center gap-1">
-            <button
-              disabled={meta.page <= 1}
-              onClick={() => onPageChange?.(meta.page - 1)}
-              className="rounded-[var(--radius-sm)] border border-border p-1 disabled:opacity-40"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <button
-              disabled={meta.page >= meta.total_pages}
-              onClick={() => onPageChange?.(meta.page + 1)}
-              className="rounded-[var(--radius-sm)] border border-border p-1 disabled:opacity-40"
-            >
-              <ChevronRight size={14} />
-            </button>
+          <div className="flex items-center gap-3">
+            {onPageSizeChange ? (
+              <label className="flex items-center gap-1.5">
+                Rows per page
+                <select
+                  value={meta.page_size}
+                  onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                  className="rounded-[var(--radius-sm)] border border-border bg-surface px-1.5 py-1 text-xs text-text-secondary outline-none focus:border-accent"
+                >
+                  {PAGE_SIZE_OPTIONS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <div className="flex items-center gap-1">
+              <button
+                disabled={meta.page <= 1}
+                onClick={() => onPageChange?.(meta.page - 1)}
+                className="rounded-[var(--radius-sm)] border border-border p-1 disabled:opacity-40"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                disabled={meta.page >= meta.total_pages}
+                onClick={() => onPageChange?.(meta.page + 1)}
+                className="rounded-[var(--radius-sm)] border border-border p-1 disabled:opacity-40"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

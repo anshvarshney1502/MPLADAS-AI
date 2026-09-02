@@ -14,13 +14,14 @@ import { ErrorState } from "@/components/ErrorState";
 import { EmptyState } from "@/components/EmptyState";
 import { formatCurrency } from "@/lib/utils";
 import type { WorkRow } from "@/lib/types";
+import { getWorksIndex } from "@/lib/works-index";
 
 const FIELDS: FilterField[] = [
   { key: "search", label: "Search description", type: "text" },
-  { key: "state", label: "State", type: "text" },
-  { key: "constituency", label: "Constituency", type: "text" },
-  { key: "mp", label: "MP", type: "text" },
-  { key: "vendor", label: "Vendor", type: "text" },
+  { key: "state", label: "State", type: "state" },
+  { key: "constituency", label: "Constituency", type: "works-field", worksField: "constituencies" },
+  { key: "mp", label: "MP", type: "works-field", worksField: "mps" },
+  { key: "vendor", label: "Vendor", type: "works-field", worksField: "vendors" },
   {
     key: "risk",
     label: "Risk Level",
@@ -75,6 +76,7 @@ function WorksPageInner() {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [house, setHouse] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   useEffect(() => {
     // Seeds the filter from a deep link (e.g. the India Risk Map's
@@ -84,6 +86,13 @@ function WorksPageInner() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (state) setFilters((f) => ({ ...f, state }));
   }, [searchParams]);
+
+  useEffect(() => {
+    // Start building the complete Constituency/MP/Vendor list in the
+    // background as soon as this page opens, so it's ready (or well
+    // underway) by the time a user opens one of those filter dropdowns.
+    void getWorksIndex();
+  }, []);
 
   const result = useApi(
     () =>
@@ -97,9 +106,9 @@ function WorksPageInner() {
         risk: filters.risk || undefined,
         status: filters.status || undefined,
         page,
-        page_size: 15,
+        page_size: pageSize,
       }),
-    [filters, house, page]
+    [filters, house, page, pageSize]
   );
 
   return (
@@ -126,7 +135,7 @@ function WorksPageInner() {
       <FilterBar
         fields={FIELDS}
         values={filters}
-        onApply={(v) => {
+        onChange={(v) => {
           setFilters(v);
           setPage(1);
         }}
@@ -146,6 +155,10 @@ function WorksPageInner() {
           rows={result.data.data}
           meta={result.data.meta}
           onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
           onRowClick={(row) => router.push(`/works/${encodeURIComponent(row.work_key)}`)}
         />
       ) : (
